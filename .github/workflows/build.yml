@@ -1,9 +1,7 @@
-name: Build PotatoGFX-KSU Module
+﻿name: Build PotatoGFX-KSU Module
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
@@ -25,12 +23,13 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
+          sed -i 's/\r$//' build.sh customize.sh service.sh uninstall.sh
           chmod +x build.sh
           ./build.sh
 
       - name: Upload Flashable KernelSU Module ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: PotatoGFX-KSU-v1.0.0-arm64
-          path: PotatoGFX-KSU-v1.0.0-arm64.zip
+          name: PotatoGFX-KSU-v1.1.0-arm64
+          path: PotatoGFX-KSU-v1.1.0-arm64.zip
           if-no-files-found: error
