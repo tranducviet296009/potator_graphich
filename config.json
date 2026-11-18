@@ -1,0 +1,29 @@
+{
+  "global_enabled": true,
+  "apps": {
+    "com.dts.freefireth": {
+      "enabled": true,
+      "minecraft_filter": true,
+      "max_texture_size": 32,
+      "downscale_factor": 0.6,
+      "disable_msaa": true,
+      "target_fps": 120
+    },
+    "com.dts.freefiremax": {
+      "enabled": true,
+      "minecraft_filter": true,
+      "max_texture_size": 32,
+      "downscale_factor": 0.6,
+      "disable_msaa": true,
+      "target_fps": 120
+    },
+    "com.garena.game.kgvn": {
+      "enabled": true,
+      "minecraft_filter": true,
+      "max_texture_size": 64,
+      "downscale_factor": 0.75,
+      "disable_msaa": true,
+      "target_fps": 120
+    }
+  }
+}

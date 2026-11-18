@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PotatoGFX-KSU Control Center</title>
+  <style>
+    :root {
+      --bg-main: #0b0e14;
+      --bg-card: #131822;
+      --bg-card-hover: #19202e;
+      --bg-input: #0e131b;
+      --border-color: #242e42;
+      --accent-green: #22c55e;
+      --accent-green-glow: rgba(34, 197, 94, 0.25);
+      --accent-cyan: #06b6d4;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      padding-bottom: 92px;
+      overflow-x: hidden;
+    }
+
+    /* Header Gaming */
+    .header {
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.14) 0%, rgba(11, 14, 20, 0.96) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 18px 16px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #16a34a, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: #fff;
+      box-shadow: 0 0 14px var(--accent-green-glow);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .brand-title h1 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      color: var(--text-primary);
+    }
+
+    .brand-title p {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .badge-device {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      white-space: nowrap;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 14px 14px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Card chuẩn */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .card-active {
+      border-color: rgba(34, 197, 94, 0.55);
+      box-shadow: 0 0 18px rgba(34, 197, 94, 0.08);
+    }
+
+    .row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Nút gạt Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #263147;
+      transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 34px;
+      border: 1px solid #364463;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #cbd5e1;
+      transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-green);
+      border-color: #4ade80;
+      box-shadow: 0 0 10px var(--accent-green-glow);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: #ffffff;
+    }
+
+    /* Thanh công cụ thêm package & tìm kiếm */
+    .toolbar-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      border-color: var(--accent-green);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #052e16;
+      box-shadow: 0 4px 12px var(--accent-green-glow);
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: var(--text-primary);
+      border-color: #334155;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      font-size: 11.5px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #1a2333;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .chip:active {
+      background: var(--accent-green);
+      color: #052e16;
+    }
+
+    /* Danh sách thẻ cấu hình từng Game */
+    .game-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .game-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 10px;
+    }
+
+    .game-meta {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .game-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .game-pkg {
+      font-size: 12px;
+      color: var(--accent-cyan);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      word-break: break-all;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .status-on {
+      background: rgba(34, 197, 94, 0.18);
+      color: #4ade80;
+    }
+
+    .status-off {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text-secondary);
+    }
+
+    .controls-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: rgba(14, 19, 27, 0.65);
+      padding: 9px 11px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(36, 46, 66, 0.7);
+    }
+
+    .control-label {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex: 1;
+    }
+
+    .control-label span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .control-label small {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .control-select {
+      width: 142px;
+      flex-shrink: 0;
+    }
+
+    .card-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      gap: 8px;
+    }
+
+    /* Thanh cố định dưới cùng */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(13, 17, 25, 0.96);
+      border-top: 1px solid var(--border-color);
+      padding: 12px 16px;
+      z-index: 60;
+      backdrop-filter: blur(10px);
+    }
+
+    .bottom-inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    .bottom-inner .btn-primary {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+
+    /* Toast thông báo */
+    #toast {
+      position: fixed;
+      bottom: 78px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid var(--accent-green);
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 100;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .shield-banner {
+      font-size: 12px;
+      color: #a7f3d0;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius-md);
+      padding: 9px 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">PX</div>
+        <div class="brand-title">
+          <h1>PotatoGFX-KSU</h1>
+          <p>Zygisk OpenGL ES Hook &amp; Android 16 Game Overlay</p>
+        </div>
+      </div>
+      <span class="badge-device" id="deviceBadge">Tecno Pova 7 • HiOS 16</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Bật/Tắt tổng và Trạng thái bảo vệ Banking -->
+    <section class="card">
+      <div class="row-between" style="margin-bottom: 10px;">
+        <div>
+          <div style="font-size: 15px; font-weight: 800;">Kích hoạt PotatoGFX Toàn Cục</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            Tắt công tắc này sẽ vô hiệu hóa toàn bộ hook đồ họa mà không cần xóa cấu hình
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="globalEnabledToggle" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="shield-banner">
+        <strong>Chế độ Ẩn Tuyệt Đối (Zero-Trace trên Android 16 / HiOS 16):</strong> Các ứng dụng không bật trong danh sách dưới đây (Ngân hàng, ZaloPay, VNeID, GMS...) tự động gọi <code>DLCLOSE_MODULE_LIBRARY</code> ngay lập tức để gỡ thư viện khỏi RAM.
+      </div>
+    </section>
+
+    <!-- Công cụ quét Package & Thêm Game -->
+    <section class="card">
+      <div class="section-title">
+        <span>Thêm Game / Ứng Dụng Đã Cài Đặt</span>
+        <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 11.5px;" id="btnScanPackages">
+          Quét máy (pm list)
+        </button>
+      </div>
+
+      <div class="toolbar-grid">
+        <div class="input-group">
+          <select id="installedPkgSelect">
+            <option value="">-- Chọn từ danh sách ứng dụng đã cài (pm list packages -3) --</option>
+          </select>
+          <button class="btn btn-secondary" id="btnAddSelectedPkg">Thêm</button>
+        </div>
+
+        <div class="input-group">
+          <input type="text" id="customPkgInput" placeholder="Hoặc nhập tên package (VD: com.dts.freefireth)..." />
+          <button class="btn btn-secondary" id="btnAddCustomPkg">+ Thêm</button>
+        </div>
+
+        <div class="preset-chips">
+          <span class="chip" data-pkg="com.dts.freefireth" data-label="Free Fire">+ Free Fire</span>
+          <span class="chip" data-pkg="com.dts.freefiremax" data-label="Free Fire MAX">+ Free Fire MAX</span>
+          <span class="chip" data-pkg="com.garena.game.kgvn" data-label="Liên Quân Mobile">+ Liên Quân Mobile</span>
+          <span class="chip" data-pkg="com.tencent.ig" data-label="PUBG Mobile">+ PUBG Mobile</span>
+          <span class="chip" data-pkg="com.vng.pubgmobile" data-label="PUBG Mobile VN">+ PUBG Mobile VN</span>
+          <span class="chip" data-pkg="com.miHoYo.GenshinImpact" data-label="Genshin Impact">+ Genshin Impact</span>
+        </div>
+
+        <div class="row-between" style="padding-top: 4px;">
+          <label style="font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 7px; cursor: pointer;">
+            <input type="checkbox" id="forceStopOnSave" checked style="accent-color: var(--accent-green); width: 16px; height: 16px;" />
+            Buộc dừng (force-stop) các game đang bật khi bấm Lưu để nạp hook mới ngay
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Danh sách cấu hình từng Game -->
+    <div>
+      <div class="section-title">
+        <span>Danh Sách Game Cấu Hình (<span id="gameCount">0</span>)</span>
+      </div>
+      <div class="game-list" id="gameListContainer"></div>
+    </div>
+  </main>
+
+  <footer class="bottom-bar">
+    <div class="bottom-inner">
+      <button class="btn btn-secondary" id="btnReloadConfig">Đọc lại</button>
+      <button class="btn btn-primary" id="btnSaveAndApply">Lưu &amp; Áp dụng ngay</button>
+    </div>
+  </footer>
+
+  <div id="toast">Đã lưu cấu hình!</div>
+
+  <script>
+    const CONFIG_PATH = "/data/adb/modules/potatogfx_ksu/config.json";
+    const SERVICE_SCRIPT = "/data/adb/modules/potatogfx_ksu/service.sh";
+
+    // Bảng tên hiển thị thân thiện cho các tựa game phổ biến tại Việt Nam
+    const KNOWN_GAME_NAMES = {
+      "com.dts.freefireth": "Garena Free Fire",
+      "com.dts.freefiremax": "Garena Free Fire MAX",
+      "com.garena.game.kgvn": "Liên Quân Mobile (AOV VN)",
+      "com.tencent.ig": "PUBG Mobile Global",
+      "com.vng.pubgmobile": "PUBG Mobile VN",
+      "com.miHoYo.GenshinImpact": "Genshin Impact",
+      "com.HoYoverse.hkrpgoversea": "Honkai: Star Rail",
+      "com.riotgames.league.wildrift": "LMHT: Tốc Chiến",
+      "com.activision.callofduty.shooter": "Call of Duty: Mobile",
+      "com.garena.game.codm": "Call of Duty: Mobile Garena",
+      "com.roblox.client": "Roblox"
+    };
+
+    // Cấu hình mặc định dự phòng
+    let appState = {
+      global_enabled: true,
+      apps: {
+        "com.dts.freefireth": {
+          enabled: true,
+          minecraft_filter: true,
+          max_texture_size: 32,
+          downscale_factor: 0.6,
+          disable_msaa: true,
+          target_fps: 120
+        },
+        "com.dts.freefiremax": {
+          enabled: true,
+          minecraft_filter: true,
+          max_texture_size: 32,
+          downscale_factor: 0.6,
+          disable_msaa: true,
+          target_fps: 120
+        },
+        "com.garena.game.kgvn": {
+          enabled: true,
+          minecraft_filter: true,
+          max_texture_size: 64,
+          downscale_factor: 0.75,
+          disable_msaa: true,
+          target_fps: 120
+        }
+      }
+    };
+
+    // =========================================================================
+    // TRÌNH BAO BỌC (WRAPPER) KERNELSU WEBUI EXEC API CHUẨN
+    // =========================================================================
+    let ksuCallbackCounter = 0;
+
+    function runKsuShell(command) {
+      return new Promise((resolve) => {
+        if (typeof window.ksu !== "undefined" && typeof window.ksu.exec === "function") {
+          const cbName = `potatogfx_cb_${Date.now()}_${++ksuCallbackCounter}`;
+          window[cbName] = (errno, stdout, stderr) => {
+            delete window[cbName];
+            resolve({
+              errno: Number(errno || 0),
+              stdout: String(stdout || ""),
+              stderr: String(stderr || "")
+            });
+          };
+          try {
+            window.ksu.exec(command, "{}", cbName);
+          } catch (err) {
+            delete window[cbName];
+            resolve({ errno: -1, stdout: "", stderr: String(err) });
+          }
+        } else {
+          console.log("[KSU-Sim] Exec:", command);
+          resolve({ errno: 127, stdout: "", stderr: "KSU WebUI bridge not active (Browser Preview Mode)" });
+        }
+      });
+    }
+
+    function showToast(msg) {
+      const toastEl = document.getElementById("toast");
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      if (window._toastTimer) clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toastEl.classList.remove("show");
+      }, 2400);
+    }
+
+    function escapeShellSingleQuote(str) {
+      return String(str).replace(/'/g, "'\\''");
+    }
+
+    // =========================================================================
+    // ĐỌC / GHI CONFIG.JSON VÀ QUÉT DANH SÁCH ỨNG DỤNG
+    // =========================================================================
+    async function loadConfigFromDisk() {
+      const res = await runKsuShell(`cat '${CONFIG_PATH}' 2>/dev/null`);
+      if (res.errno === 0 && res.stdout.trim().length > 0) {
+        try {
+          const parsed = JSON.parse(res.stdout);
+          if (typeof parsed === "object" && parsed !== null) {
+            appState.global_enabled = parsed.global_enabled !== false;
+            appState.apps = parsed.apps && typeof parsed.apps === "object" ? parsed.apps : {};
+          }
+        } catch (e) {
+          showToast("Lỗi cú pháp JSON, dùng cấu hình mặc định");
+        }
+      } else {
+        const localBackup = localStorage.getItem("potatogfx_preview_cfg");
+        if (localBackup) {
+          try {
+            appState = JSON.parse(localBackup);
+          } catch (_) {}
+        }
+      }
+      document.getElementById("globalEnabledToggle").checked = Boolean(appState.global_enabled);
+      renderGameCards();
+    }
+
+    async function scanInstalledPackages() {
+      const selectEl = document.getElementById("installedPkgSelect");
+      selectEl.innerHTML = `<option value="">Đang quét danh sách ứng dụng...</option>`;
+      const res = await runKsuShell("pm list packages -3 | cut -d':' -f2 | sort");
+      let pkgs = [];
+      if (res.errno === 0 && res.stdout.trim()) {
+        pkgs = res.stdout
+          .split(/\r?\n/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+      } else {
+        pkgs = Object.keys(KNOWN_GAME_NAMES);
+      }
+
+      selectEl.innerHTML = `<option value="">-- Chọn ứng dụng đã cài (${pkgs.length} gói) --</option>`;
+      pkgs.forEach((pkg) => {
+        const opt = document.createElement("option");
+        opt.value = pkg;
+        const friendly = KNOWN_GAME_NAMES[pkg];
+        opt.textContent = friendly ? `${friendly} (${pkg})` : pkg;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    async function detectDeviceModel() {
+      const res = await runKsuShell("echo \"$(getprop ro.product.model) • Android $(getprop ro.build.version.release)\"");
+      if (res.errno === 0 && res.stdout.trim()) {
+        document.getElementById("deviceBadge").textContent = res.stdout.trim();
+      }
+    }
+
+    // =========================================================================
+    // HIỂN THỊ DANH SÁCH THẺ CẤU HÌNH GAME
+    // =========================================================================
+    function renderGameCards() {
+      const container = document.getElementById("gameListContainer");
+      container.innerHTML = "";
+
+      const pkgKeys = Object.keys(appState.apps);
+      document.getElementById("gameCount").textContent = String(pkgKeys.length);
+
+      if (pkgKeys.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+            Chưa có game nào trong danh sách. Hãy chọn từ danh sách ứng dụng hoặc bấm nút thêm nhanh phía trên.
+          </div>
+        `;
+        return;
+      }
+
+      pkgKeys.forEach((pkg) => {
+        const cfg = appState.apps[pkg];
+        const friendlyName = KNOWN_GAME_NAMES[pkg] || pkg.split(".").pop().toUpperCase();
+        const isEnabled = Boolean(cfg.enabled);
+
+        const card = document.createElement("div");
+        card.className = `card ${isEnabled ? "card-active" : ""}`;
+
+        card.innerHTML = `
+          <div class="game-header">
+            <div class="game-meta">
+              <div class="game-title">
+                <span>${friendlyName}</span>
+                <span class="status-pill ${isEnabled ? "status-on" : "status-off"}">
+                  ${isEnabled ? "ĐANG BẬT" : "ĐÃ TẮT"}
+                </span>
+              </div>
+              <div class="game-pkg">${pkg}</div>
+            </div>
+            <label class="switch" title="Bật/Tắt PotatoGFX cho game này">
+              <input type="checkbox" data-pkg="${pkg}" data-field="enabled" ${isEnabled ? "checked" : ""} />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="controls-grid">
+            <div class="control-item">
+              <div class="control-label">
+                <span>Chế độ Minecraft (GL_NEAREST)</span>
+                <small>Ép lọc khối pixel vuông sắc nét, bỏ lọc tuyến tính tốn GPU</small>
+              </div>
+              <label class="switch">
+                <input type="checkbox" data-pkg="${pkg}" data-field="minecraft_filter" ${cfg.minecraft_filter ? "checked" : ""} />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="control-item">
+              <div class="control-label">
+                <span>Giới hạn kích thước Texture</span>
+                <small>Hạ độ chi tiết bề mặt 3D (Potato Mode)</small>
+              </div>
+              <select class="control-select" data-pkg="${pkg}" data-field="max_texture_size">
+                <option value="16" ${Number(cfg.max_texture_size) === 16 ? "selected" : ""}>16px (Siêu khối)</option>
+                <option value="32" ${Number(cfg.max_texture_size) === 32 ? "selected" : ""}>32px (Minecraft)</option>
+                <option value="64" ${Number(cfg.max_texture_size) === 64 ? "selected" : ""}>64px (Cân bằng)</option>
+                <option value="128" ${Number(cfg.max_texture_size) === 128 ? "selected" : ""}>128px (Nhẹ)</option>
+                <option value="0" ${Number(cfg.max_texture_size) === 0 ? "selected" : ""}>Gốc (Không ép)</option>
+              </select>
+            </div>
+
+            <div class="control-item">
+              <div class="control-label">
+                <span>Hạ độ phân giải Render (Game Overlay)</span>
+                <small>Android 16 Downscale Factor giảm tải GPU trực tiếp</small>
+              </div>
+              <select class="control-select" data-pkg="${pkg}" data-field="downscale_factor">
+                <option value="0.5" ${Number(cfg.downscale_factor) === 0.5 ? "selected" : ""}>0.5x (Siêu nhẹ)</option>
+                <option value="0.6" ${Number(cfg.downscale_factor) === 0.6 ? "selected" : ""}>0.6x (Khuyên dùng)</option>
+                <option value="0.75" ${Number(cfg.downscale_factor) === 0.75 ? "selected" : ""}>0.75x (Rõ nét vừa)</option>
+                <option value="0.85" ${Number(cfg.downscale_factor) === 0.85 ? "selected" : ""}>0.85x (Mịn)</option>
+                <option value="1.0" ${Number(cfg.downscale_factor) === 1.0 ? "selected" : ""}>1.0x (Độ phân giải gốc)</option>
+              </select>
+            </div>
+
+            <div class="control-item">
+              <div class="control-label">
+                <span>Tắt khử răng cưa (Disable MSAA)</span>
+                <small>Ép EGL_SAMPLES = 0 &amp; EGL_SAMPLE_BUFFERS = 0</small>
+              </div>
+              <label class="switch">
+                <input type="checkbox" data-pkg="${pkg}" data-field="disable_msaa" ${cfg.disable_msaa ? "checked" : ""} />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="control-item">
+              <div class="control-label">
+                <span>Khóa FPS mục tiêu</span>
+                <small>Đồng bộ Game Mode Performance + Tần số quét</small>
+              </div>
+              <select class="control-select" data-pkg="${pkg}" data-field="target_fps">
+                <option value="60" ${Number(cfg.target_fps) === 60 ? "selected" : ""}>60 FPS</option>
+                <option value="90" ${Number(cfg.target_fps) === 90 ? "selected" : ""}>90 FPS</option>
+                <option value="120" ${Number(cfg.target_fps) === 120 ? "selected" : ""}>120 FPS (Max Pova 7)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-danger" data-action="remove" data-pkg="${pkg}" style="padding: 7px 12px; font-size: 12px;">
+              Xóa khỏi danh sách
+            </button>
+            <button class="btn btn-secondary" data-action="apply-single" data-pkg="${pkg}" style="padding: 7px 12px; font-size: 12px;">
+              Áp dụng &amp; Khởi động lại Game
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // XỬ LÝ SỰ KIỆN TƯƠNG TÁC TRÊN GIAO DIỆN
+    // =========================================================================
+    function addPackageToConfig(pkg) {
+      const cleanPkg = String(pkg || "").trim();
+      if (!cleanPkg || !/^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+$/.test(cleanPkg)) {
+        showToast("Tên package không hợp lệ!");
+        return;
+      }
+      if (!appState.apps[cleanPkg]) {
+        appState.apps[cleanPkg] = {
+          enabled: true,
+          minecraft_filter: true,
+          max_texture_size: 32,
+          downscale_factor: 0.6,
+          disable_msaa: true,
+          target_fps: 120
+        };
+        renderGameCards();
+        showToast(`Đã thêm ${cleanPkg}`);
+      } else {
+        showToast(`${cleanPkg} đã có trong danh sách`);
+      }
+    }
+
+    async function saveAndApplyAll(singlePkg = null) {
+      const jsonPretty = JSON.stringify(appState, null, 2);
+      localStorage.setItem("potatogfx_preview_cfg", jsonPretty);
+
+      const escapedJson = escapeShellSingleQuote(jsonPretty);
+      const forceStop = document.getElementById("forceStopOnSave").checked;
+
+      let cmds = [
+        `mkdir -p /data/adb/modules/potatogfx_ksu`,
+        `printf '%s\\n' '${escapedJson}' > '${CONFIG_PATH}'`,
+        `chmod 0644 '${CONFIG_PATH}'`
+      ];
+
+      const targetPackages = singlePkg ? [singlePkg] : Object.keys(appState.apps);
+
+      targetPackages.forEach((pkg) => {
+        const cfg = appState.apps[pkg];
+        if (!cfg) return;
+        if (appState.global_enabled && cfg.enabled) {
+          const factor = Number(cfg.downscale_factor);
+          const fps = Number(cfg.target_fps) || 120;
+          if (factor >= 0.99) {
+            cmds.push(`cmd device_config put game_overlay ${pkg} mode=2,fps=${fps}:mode=3,fps=${fps} >/dev/null 2>&1`);
+            cmds.push(`cmd game set --mode 2 --fps ${fps} ${pkg} >/dev/null 2>&1`);
+          } else {
+            cmds.push(`cmd device_config put game_overlay ${pkg} mode=2,fps=${fps},downscaleFactor=${factor}:mode=3,fps=${fps},downscaleFactor=${factor} >/dev/null 2>&1`);
+            cmds.push(`cmd game set --mode 2 --fps ${fps} --downscale ${factor} ${pkg} >/dev/null 2>&1`);
+          }
+          cmds.push(`cmd game mode performance ${pkg} >/dev/null 2>&1`);
+          if (forceStop || singlePkg) {
+            cmds.push(`am force-stop ${pkg} >/dev/null 2>&1`);
+          }
+        } else {
+          cmds.push(`cmd device_config delete game_overlay ${pkg} >/dev/null 2>&1`);
+          cmds.push(`cmd game reset ${pkg} >/dev/null 2>&1`);
+        }
+      });
+
+      const fullCommand = cmds.join(" && ");
+      const res = await runKsuShell(fullCommand);
+      if (res.errno === 0) {
+        showToast(singlePkg ? `Đã áp dụng & làm mới ${singlePkg}!` : "Đã lưu config.json & áp dụng Android 16 Game Overlay!");
+      } else {
+        showToast("Đã lưu cấu hình (Chế độ xem trước / Kiểm tra quyền Root)");
+      }
+    }
+
+    document.getElementById("globalEnabledToggle").addEventListener("change", (e) => {
+      appState.global_enabled = e.target.checked;
+    });
+
+    document.getElementById("btnScanPackages").addEventListener("click", () => {
+      scanInstalledPackages();
+    });
+
+    document.getElementById("btnAddSelectedPkg").addEventListener("click", () => {
+      const val = document.getElementById("installedPkgSelect").value;
+      if (val) addPackageToConfig(val);
+    });
+
+    document.getElementById("btnAddCustomPkg").addEventListener("click", () => {
+      const inputEl = document.getElementById("customPkgInput");
+      addPackageToConfig(inputEl.value);
+      inputEl.value = "";
+    });
+
+    document.querySelectorAll(".chip[data-pkg]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        addPackageToConfig(chip.getAttribute("data-pkg"));
+      });
+    });
+
+    document.getElementById("gameListContainer").addEventListener("change", (e) => {
+      const target = e.target;
+      const pkg = target.getAttribute("data-pkg");
+      const field = target.getAttribute("data-field");
+      if (!pkg || !field || !appState.apps[pkg]) return;
+
+      if (target.type === "checkbox") {
+        appState.apps[pkg][field] = target.checked;
+        if (field === "enabled") renderGameCards();
+      } else {
+        const numVal = Number(target.value);
+        appState.apps[pkg][field] = Number.isNaN(numVal) ? target.value : numVal;
+      }
+    });
+
+    document.getElementById("gameListContainer").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      const action = btn.getAttribute("data-action");
+      const pkg = btn.getAttribute("data-pkg");
+      if (!pkg) return;
+
+      if (action === "remove") {
+        await runKsuShell(`cmd device_config delete game_overlay ${pkg} >/dev/null 2>&1; cmd game reset ${pkg} >/dev/null 2>&1`);
+        delete appState.apps[pkg];
+        renderGameCards();
+        showToast(`Đã xóa ${pkg}`);
+      } else if (action === "apply-single") {
+        await saveAndApplyAll(pkg);
+      }
+    });
+
+    document.getElementById("btnReloadConfig").addEventListener("click", () => {
+      loadConfigFromDisk();
+      showToast("Đã tải lại config.json");
+    });
+
+    document.getElementById("btnSaveAndApply").addEventListener("click", () => {
+      saveAndApplyAll(null);
+    });
+
+    // Khởi chạy ban đầu
+    window.addEventListener("DOMContentLoaded", () => {
+      detectDeviceModel();
+      loadConfigFromDisk();
+      scanInstalledPackages();
+    });
+  </script>
+</body>
+</html>

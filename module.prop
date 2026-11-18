@@ -1,0 +1,7 @@
+id=potatogfx_ksu
+name=PotatoGFX-KSU (Minecraft Graphics & 120FPS)
+version=v1.1.0
+versionCode=110
+author=PotatoGFX-Dev
+description=Biến đồ họa game (Free Fire, Liên Quân...) thành Minecraft Pixel / Potato Graphics qua Zygisk OpenGL ES Hook & Android 16 Game Overlay. Tối ưu 120FPS cho Tecno Pova 7 (Android 16 / HiOS 16), ẩn hoàn toàn với app ngân hàng.
+updateJson=
