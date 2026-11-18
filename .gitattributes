@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.prop text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.txt text eol=lf
+*.mk text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.yml text eol=lf

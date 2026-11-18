@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.10)
 project(potatogfx CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -20,6 +20,7 @@ target_compile_options(potatogfx PRIVATE
     -fdata-sections
 )
 
+# Android 16 (API 36) yêu cầu các file .so căn lề phân đoạn ELF 16KB (-Wl,-z,max-page-size=16384)
 target_link_options(potatogfx PRIVATE
     -Wl,--gc-sections
     -Wl,--strip-all

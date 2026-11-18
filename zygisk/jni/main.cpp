@@ -2,8 +2,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/sysmacros.h>
 #include <android/log.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
@@ -12,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 #include <cmath>
 #include <cctype>
 #include <string>
@@ -21,13 +24,6 @@
 #include <algorithm>
 
 #include "zygisk.hpp"
-
-#if defined(USE_SHADOWHOOK) && __has_include("shadowhook.h")
-#include "shadowhook.h"
-#define HAS_SHADOWHOOK 1
-#else
-#define HAS_SHADOWHOOK 0
-#endif
 
 #define LOG_TAG "PotatoGFX-KSU"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -41,7 +37,7 @@ struct AppConfig {
     bool enabled = false;
     bool minecraft_filter = true;
     int max_texture_size = 32;      // 0 = Gốc (không giới hạn), 16 / 32 / 64 / 128
-    float downscale_factor = 0.6f;  // 0.5 -> 1.0 (dùng cho Android 15 Game Overlay)
+    float downscale_factor = 0.6f;  // 0.5 -> 1.0 (dùng cho Android 16 Game Overlay)
     bool disable_msaa = true;
     int target_fps = 120;
 };
@@ -166,7 +162,6 @@ static bool load_config_for_package(const std::string &json_text, const std::str
 }
 
 static std::string read_config_file(zygisk::Api *api) {
-    // 1. Thử đọc qua Module Dir FD của Zygisk (vượt qua SELinux sandbox của game bình thường)
     if (api != nullptr) {
         int dir_fd = api->getModuleDir();
         if (dir_fd >= 0) {
@@ -187,7 +182,6 @@ static std::string read_config_file(zygisk::Api *api) {
         }
     }
 
-    // 2. Fallback: Đọc trực tiếp đường dẫn /data/adb/modules/potatogfx_ksu/config.json
     const char *fallback_path = "/data/adb/modules/potatogfx_ksu/config.json";
     int fd = open(fallback_path, O_RDONLY | O_CLOEXEC);
     if (fd >= 0) {
@@ -269,7 +263,6 @@ static int get_bytes_per_pixel(GLenum format, GLenum type) {
     return 0;
 }
 
-// Downsample dữ liệu pixel bằng thuật toán Nearest-Neighbor sang bộ đệm nhỏ
 static void downsample_pixels_nearest(const uint8_t *src, int src_w, int src_h,
                                       uint8_t *dst, int dst_w, int dst_h, int bpp) {
     for (int y = 0; y < dst_h; ++y) {
@@ -287,9 +280,6 @@ static void downsample_pixels_nearest(const uint8_t *src, int src_w, int src_h,
     }
 }
 
-// Pixel hóa tại chỗ (In-place Box/Block Pixelation) cho texture:
-// Giữ nguyên kích thước buffer tránh lỗi lệch vùng nhớ khi game gọi glTexSubImage2D/FBO,
-// nhưng gộp các cụm pixel thành từng ô vuông lớn kiểu Minecraft (ví dụ 32x32 khối trên toàn bề mặt)
 static void pixelate_buffer_to_grid(const uint8_t *src, uint8_t *dst,
                                     int width, int height, int bpp, int max_grid_cells) {
     if (max_grid_cells <= 0) return;
@@ -345,7 +335,6 @@ static void hook_glTexParameteri(GLenum target, GLenum pname, GLint param) {
         if (pname == GL_TEXTURE_MIN_FILTER || pname == GL_TEXTURE_MAG_FILTER) {
             param = (pname == GL_TEXTURE_MAG_FILTER) ? GL_NEAREST : convert_filter_to_nearest(param);
         }
-        // Khoá Anisotropic Filtering (0x84FE = GL_TEXTURE_MAX_ANISOTROPY_EXT) về 1 để giảm tải GPU
         if (pname == 0x84FE) {
             param = 1;
         }
@@ -432,10 +421,6 @@ static void hook_glSamplerParameterf(GLuint sampler, GLenum pname, GLfloat param
     orig_glSamplerParameterf(sampler, pname, param);
 }
 
-// Hook glTexImage2D:
-// - Bỏ qua các texture nhỏ (<= 64px như icon/font UI) và Render Target trống (pixels == nullptr) để tránh lỗi FBO/UI.
-// - Với texture 2D có dữ liệu pixel: thu nhỏ kích thước thực sự xuống max_texture_size (nếu level == 0)
-//   và lưu ánh xạ ID texture để đồng bộ nếu glTexSubImage2D được gọi sau đó.
 static void hook_glTexImage2D(GLenum target, GLint level, GLint internalformat,
                               GLsizei width, GLsizei height, GLint border,
                               GLenum format, GLenum type, const void *pixels) {
@@ -451,13 +436,11 @@ static void hook_glTexImage2D(GLenum target, GLint level, GLint internalformat,
             GLint unpack_row_len = 0;
             glGetIntegerv(GL_UNPACK_ROW_LENGTH, &unpack_row_len);
 
-            // Chỉ can thiệp khi bộ đệm pixel liên tục chuẩn để không đọc tràn bộ nhớ
             if (unpack_row_len == 0 && ((width * bpp) % unpack_align == 0)) {
                 if (level == 0) {
                     GLsizei new_w = std::max(1, std::min(width, max_tex));
                     GLsizei new_h = std::max(1, std::min(height, max_tex));
 
-                    // Giữ tỷ lệ khung hình của texture
                     if (width > height) {
                         new_w = max_tex;
                         new_h = std::max(1, (height * max_tex) / width);
@@ -486,7 +469,6 @@ static void hook_glTexImage2D(GLenum target, GLint level, GLint internalformat,
                     }
                     return;
                 } else {
-                    // Với mipmap levels > 0: Pixelate tại chỗ để giữ nguyên chuỗi mipmap hợp lệ tránh đen texture
                     int mip_grid = std::max(1, max_tex >> level);
                     std::vector<uint8_t> pix_buf(static_cast<size_t>(width) * height * bpp);
                     pixelate_buffer_to_grid(static_cast<const uint8_t *>(pixels), pix_buf.data(),
@@ -506,9 +488,6 @@ static void hook_glTexImage2D(GLenum target, GLint level, GLint internalformat,
     }
 }
 
-// Hook glTexSubImage2D:
-// - Đảm bảo an toàn tuyệt đối khi game cập nhật một phần hoặc toàn bộ texture đã bị thu nhỏ ở glTexImage2D,
-//   hoặc khi game khởi tạo bằng glTexStorage2D rồi nạp ảnh qua glTexSubImage2D.
 static void hook_glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                                  GLsizei width, GLsizei height, GLenum format,
                                  GLenum type, const void *pixels) {
@@ -537,8 +516,6 @@ static void hook_glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLin
             }
 
             if (is_scaled_tex && dim_info.orig_w > 0 && dim_info.orig_h > 0) {
-                // Nếu texture gốc đã được thu nhỏ kích thước thực sự ở glTexImage2D:
-                // Quy đổi tọa độ xoffset, yoffset, width, height theo đúng tỷ lệ đã thu nhỏ tránh GL_INVALID_VALUE
                 GLint new_x = (xoffset * dim_info.scaled_w) / dim_info.orig_w;
                 GLint new_y = (yoffset * dim_info.scaled_h) / dim_info.orig_h;
                 GLsizei new_w = std::max(1, (width * dim_info.scaled_w) / dim_info.orig_w);
@@ -558,8 +535,6 @@ static void hook_glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLin
                 return;
             }
 
-            // Nếu texture được cấp phát bởi glTexStorage2D (giữ nguyên kích thước khung):
-            // Thực hiện Pixelate khối vuông kiểu Minecraft ngay trên buffer upload nếu kích thước > 128px
             if (width > 128 && height > 128 && (width > max_tex || height > max_tex)) {
                 GLint unpack_align = 4;
                 glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpack_align);
@@ -581,9 +556,6 @@ static void hook_glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLin
     orig_glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
 }
 
-// Hook glTexStorage2D:
-// Giữ nguyên width/height cấp phát để không làm vỡ glCompressedTexSubImage2D của Unity/Unreal,
-// đồng thời ép bộ lọc GL_NEAREST ngay khi khởi tạo immutable texture.
 static void hook_glTexStorage2D(GLenum target, GLsizei levels, GLenum internalformat,
                                 GLsizei width, GLsizei height) {
     if (!orig_glTexStorage2D) return;
@@ -595,9 +567,6 @@ static void hook_glTexStorage2D(GLenum target, GLsizei levels, GLenum internalfo
     }
 }
 
-// Hook glCompressedTexImage2D (ETC2 / ASTC dùng nhiều trong Free Fire và Liên Quân Mobile):
-// Với texture nén, ép lọc GL_NEAREST và đặt GL_TEXTURE_BASE_LEVEL lên mipmap nhỏ hơn
-// khi game tải các mipmap levels để tạo hiệu ứng Potato / Minecraft cực nhẹ mà không cần giải nén ASTC trên CPU.
 static void hook_glCompressedTexImage2D(GLenum target, GLint level, GLenum internalformat,
                                         GLsizei width, GLsizei height, GLint border,
                                         GLsizei imageSize, const void *data) {
@@ -610,8 +579,6 @@ static void hook_glCompressedTexImage2D(GLenum target, GLint level, GLenum inter
                                  (level > 0) ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST);
             orig_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         }
-        // Nếu người dùng bật giới hạn max_texture_size và game đang nạp mipmap nhỏ vừa tầm max_texture_size,
-        // khoá GL_TEXTURE_BASE_LEVEL tới level đó để GPU chỉ lấy mẫu từ mipmap độ phân giải thấp!
         const int max_tex = g_active_cfg.max_texture_size;
         if (max_tex > 0 && level > 0 && width >= 16 && height >= 16) {
             if (width <= max_tex * 2 && height <= max_tex * 2) {
@@ -621,8 +588,6 @@ static void hook_glCompressedTexImage2D(GLenum target, GLint level, GLenum inter
     }
 }
 
-// Hook eglChooseConfig:
-// Ép tắt hoàn toàn khử răng cưa đa mẫu (MSAA: EGL_SAMPLES = 0, EGL_SAMPLE_BUFFERS = 0)
 static EGLBoolean hook_eglChooseConfig(EGLDisplay dpy, const EGLint *attrib_list,
                                        EGLConfig *configs, EGLint config_size,
                                        EGLint *num_config) {
@@ -638,7 +603,7 @@ static EGLBoolean hook_eglChooseConfig(EGLDisplay dpy, const EGLint *attrib_list
             }
             patched_attribs.push_back(attr);
             patched_attribs.push_back(val);
-            if (i > 256) break; // Bảo vệ chống mảng không kết thúc bằng EGL_NONE
+            if (i > 256) break;
         }
         patched_attribs.push_back(EGL_NONE);
         return orig_eglChooseConfig(dpy, patched_attribs.data(), configs, config_size, num_config);
@@ -647,9 +612,6 @@ static EGLBoolean hook_eglChooseConfig(EGLDisplay dpy, const EGLint *attrib_list
     return orig_eglChooseConfig(dpy, attrib_list, configs, config_size, num_config);
 }
 
-// Hook eglGetProcAddress:
-// Nhiều engine game (Unity / Unreal) lấy địa chỉ hàm GL động qua eglGetProcAddress thay vì gọi qua PLT.
-// Chặn tại đây giúp đảm bảo 100% các lệnh gọi GL của game đều đi qua hàm hook của PotatoGFX.
 static __eglMustCastToProperFunctionPointerType hook_eglGetProcAddress(const char *procname) {
     if (!orig_eglGetProcAddress) return nullptr;
     auto real_fn = orig_eglGetProcAddress(procname);
@@ -704,7 +666,7 @@ static __eglMustCastToProperFunctionPointerType hook_eglGetProcAddress(const cha
 }
 
 // ============================================================================
-// CƠ CHẾ CÀI ĐẶT HOOK KẾT HỢP: SHADOWHOOK INLINE + ZYGISK PLT HOOK
+// CƠ CHẾ CÀI ĐẶT HOOK: ZYGISK PLT HOOK + EGLGETPROCADDRESS HOOK
 // ============================================================================
 static void resolve_original_gl_symbols() {
     void *h_gles2 = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_NOLOAD);
@@ -737,36 +699,6 @@ static void resolve_original_gl_symbols() {
     }
 }
 
-#if HAS_SHADOWHOOK
-static void install_shadowhook_inline() {
-    int sh_err = shadowhook_init(SHADOWHOOK_MODE_UNIQUE, false);
-    if (sh_err != 0 && sh_err != SHADOWHOOK_ERRNO_OK) {
-        LOGW("ShadowHook init trả về mã: %d", sh_err);
-    }
-
-    auto hook_sym = [](const char *lib, const char *sym, void *new_fn, void **orig_fn) {
-        void *stub = shadowhook_hook_sym_name(lib, sym, new_fn, orig_fn);
-        if (stub == nullptr) {
-            LOGW("ShadowHook bỏ qua %s!%s (errno=%d)", lib, sym, shadowhook_get_errno());
-        }
-    };
-
-    hook_sym("libGLESv2.so", "glTexParameteri", reinterpret_cast<void *>(hook_glTexParameteri), reinterpret_cast<void **>(&orig_glTexParameteri));
-    hook_sym("libGLESv2.so", "glTexParameterf", reinterpret_cast<void *>(hook_glTexParameterf), reinterpret_cast<void **>(&orig_glTexParameterf));
-    hook_sym("libGLESv2.so", "glTexParameteriv", reinterpret_cast<void *>(hook_glTexParameteriv), reinterpret_cast<void **>(&orig_glTexParameteriv));
-    hook_sym("libGLESv2.so", "glTexParameterfv", reinterpret_cast<void *>(hook_glTexParameterfv), reinterpret_cast<void **>(&orig_glTexParameterfv));
-    hook_sym("libGLESv2.so", "glSamplerParameteri", reinterpret_cast<void *>(hook_glSamplerParameteri), reinterpret_cast<void **>(&orig_glSamplerParameteri));
-    hook_sym("libGLESv2.so", "glSamplerParameterf", reinterpret_cast<void *>(hook_glSamplerParameterf), reinterpret_cast<void **>(&orig_glSamplerParameterf));
-    hook_sym("libGLESv2.so", "glTexImage2D", reinterpret_cast<void *>(hook_glTexImage2D), reinterpret_cast<void **>(&orig_glTexImage2D));
-    hook_sym("libGLESv2.so", "glTexSubImage2D", reinterpret_cast<void *>(hook_glTexSubImage2D), reinterpret_cast<void **>(&orig_glTexSubImage2D));
-    hook_sym("libGLESv2.so", "glTexStorage2D", reinterpret_cast<void *>(hook_glTexStorage2D), reinterpret_cast<void **>(&orig_glTexStorage2D));
-    hook_sym("libGLESv2.so", "glCompressedTexImage2D", reinterpret_cast<void *>(hook_glCompressedTexImage2D), reinterpret_cast<void **>(&orig_glCompressedTexImage2D));
-    hook_sym("libEGL.so", "eglChooseConfig", reinterpret_cast<void *>(hook_eglChooseConfig), reinterpret_cast<void **>(&orig_eglChooseConfig));
-    hook_sym("libEGL.so", "eglGetProcAddress", reinterpret_cast<void *>(hook_eglGetProcAddress), reinterpret_cast<void **>(&orig_eglGetProcAddress));
-}
-#endif
-
-// Quét /proc/self/maps và đăng ký Zygisk PLT Hook cho toàn bộ thư viện hệ thống + engine game
 static void register_plt_hooks_from_maps(zygisk::Api *api) {
     if (!api) return;
     FILE *fp = std::fopen("/proc/self/maps", "r");
@@ -790,7 +722,6 @@ static void register_plt_hooks_from_maps(zygisk::Api *api) {
             if (inode == 0 || path_offset <= 0) continue;
             const char *path = line + path_offset;
             if (std::strstr(path, ".so") == nullptr) continue;
-            // Không tự hook chính thư viện module của chúng ta
             if (std::strstr(path, "potatogfx") != nullptr) continue;
 
             dev_t dev = makedev(dev_major, dev_minor);
@@ -829,11 +760,6 @@ static void install_all_gl_hooks(zygisk::Api *api, const char *pkg_name) {
     g_hooks_installed = true;
 
     resolve_original_gl_symbols();
-
-#if HAS_SHADOWHOOK
-    install_shadowhook_inline();
-#endif
-
     register_plt_hooks_from_maps(api);
 
     LOGI("Đã kích hoạt PotatoGFX cho [%s] | Minecraft=%d | MaxTex=%dpx | MSAA_Off=%d | Scale=%.2f | FPS=%d",
@@ -861,7 +787,6 @@ public:
             return;
         }
 
-        // Bỏ qua ngay lập tức các tiến trình hệ thống (uid < 10000) hoặc tiến trình nằm trong Denylist (Ngân hàng, ZaloPay, GMS)
         uint32_t flags = api_->getFlags();
         if ((flags & zygisk::StateFlags::PROCESS_ON_DENYLIST) != 0 || args->uid < 10000) {
             api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
@@ -873,7 +798,6 @@ public:
             std::string proc_name(raw_nice_name);
             env_->ReleaseStringUTFChars(args->nice_name, raw_nice_name);
 
-            // Tách tên package gốc nếu là sub-process kiểu com.dts.freefireth:unity
             size_t colon_pos = proc_name.find(':');
             if (colon_pos != std::string::npos) {
                 package_name_ = proc_name.substr(0, colon_pos);
@@ -882,19 +806,15 @@ public:
             }
         }
 
-        // Đọc file config.json ngay trong preAppSpecialize (trước khi tiến trình hạ quyền sandbox)
         std::string config_json = read_config_file(api_);
         should_hook_ = load_config_for_package(config_json, package_name_, target_cfg_);
 
         if (!should_hook_) {
-            // Đóng và gỡ bỏ hoàn toàn thư viện khỏi bộ nhớ nếu không phải game được bật
             api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
         }
     }
 
     void postAppSpecialize(const zygisk::AppSpecializeArgs *args) override {
-        // Kiểm tra lại trong postAppSpecialize theo đúng chuẩn yêu cầu:
-        // Nếu người dùng vừa cập nhật nóng /data/adb/modules/potatogfx_ksu/config.json qua WebUI thì nạp lại
         std::string live_json = read_config_file(api_);
         if (!live_json.empty()) {
             AppConfig refreshed_cfg;
@@ -906,7 +826,6 @@ public:
             }
         }
 
-        // BẮT BUỘC: Nếu package KHÔNG nằm trong danh sách game được bật, gỡ ngay thư viện khỏi bộ nhớ
         if (!should_hook_ || !target_cfg_.enabled) {
             api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
             return;
@@ -917,7 +836,6 @@ public:
     }
 
     void preServerSpecialize(zygisk::ServerSpecializeArgs *args) override {
-        // Không bao giờ can thiệp vào system_server
         api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
     }
 

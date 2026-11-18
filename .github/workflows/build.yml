@@ -1,7 +1,9 @@
-﻿name: Build PotatoGFX-KSU Module
+name: Build PotatoGFX-KSU Module
 
 on:
   push:
+    branches: [ "main", "master" ]
+  pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
@@ -19,13 +21,15 @@ jobs:
           ndk-version: r26d
           add-to-path: true
 
+      - name: Normalize Line Endings & Strip UTF-8 BOM
+        run: |
+          find . -type f \( -name "*.sh" -o -name "*.prop" -o -name "*.json" -o -name "*.cpp" -o -name "*.hpp" -o -name "*.txt" \) -exec sed -i '1s/^\xEF\xBB\xBF//;s/\r$//' {} +
+
       - name: Compile Zygisk arm64-v8a.so & Package Flashable ZIP
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          sed -i 's/\r$//' build.sh customize.sh service.sh uninstall.sh
-          chmod +x build.sh
-          ./build.sh
+          bash ./build.sh
 
       - name: Upload Flashable KernelSU Module ZIP
         uses: actions/upload-artifact@v4
